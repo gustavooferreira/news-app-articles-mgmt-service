@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/VividCortex/mysqlerr"
 	"github.com/go-sql-driver/mysql"
@@ -63,8 +64,8 @@ func (dbs *DatabaseService) HealthCheck() error {
 }
 
 // GetArticles returns all articles records matching a certain criteria.
-func (dbs *DatabaseService) GetArticles(provider string, category string) (articles entities.Articles, err error) {
-	articleRecords, err := dbs.Database.FindAllArticleRecords(provider, category)
+func (dbs *DatabaseService) GetArticles(provider string, category string, sorting string, limit int, after *time.Time) (articles entities.Articles, err error) {
+	articleRecords, err := dbs.Database.FindAllArticleRecords(provider, category, sorting, limit, after)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return entities.Articles{}, nil
 	} else if err != nil {
@@ -75,9 +76,13 @@ func (dbs *DatabaseService) GetArticles(provider string, category string) (artic
 
 	for _, articleRecord := range articleRecords {
 		articleItem := entities.Article{
-			GUID:     articleRecord.GUID,
-			Provider: articleRecord.Provider.Name,
-			Category: articleRecord.Category.Name,
+			GUID:          articleRecord.GUID,
+			Title:         articleRecord.Title,
+			Description:   articleRecord.Description,
+			Link:          articleRecord.Link,
+			PublishedTime: articleRecord.PublishedDate,
+			Provider:      articleRecord.Provider.Name,
+			Category:      articleRecord.Category.Name,
 		}
 
 		articleList = append(articleList, articleItem)
@@ -88,7 +93,7 @@ func (dbs *DatabaseService) GetArticles(provider string, category string) (artic
 
 // AddArticle adds a new article record to the database.
 func (dbs *DatabaseService) AddArticle(article entities.Article) (err error) {
-	err = dbs.Database.InsertArticleRecord(article.GUID, article.Provider, article.Category)
+	err = dbs.Database.InsertArticleRecord(article)
 	if err != nil {
 		if driverErr, ok := err.(*mysql.MySQLError); ok {
 			if driverErr.Number == mysqlerr.ER_DUP_ENTRY {

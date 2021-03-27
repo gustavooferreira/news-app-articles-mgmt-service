@@ -2,7 +2,9 @@ package repository
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/gustavooferreira/news-app-articles-mgmt-service/pkg/core/entities"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -60,7 +62,7 @@ func (db *Database) HealthCheck() error {
 }
 
 // FindAllArticleRecords finds all the article records.
-func (db *Database) FindAllArticleRecords(provider string, category string) ([]Article, error) {
+func (db *Database) FindAllArticleRecords(provider string, category string, sorting string, limit int, after *time.Time) ([]Article, error) {
 	var articleResults []Article
 	chain := db.conn.Joins("Provider").Joins("Category")
 
@@ -72,31 +74,48 @@ func (db *Database) FindAllArticleRecords(provider string, category string) ([]A
 		chain = chain.Where("`Category`.`name` = ?", category)
 	}
 
-	// chain = chain.Where(&Feed{Enabled: &enabled})
+	if sorting == "asc" {
+		chain = chain.Order("published_date asc")
+		if after != nil {
+			chain = chain.Where("published_date > ?", after)
+		}
+	} else {
+		chain = chain.Order("published_date desc")
+		if after != nil {
+			chain = chain.Where("published_date < ?", after)
+		}
+	}
+
+	chain = chain.Limit(limit)
+
 	result := chain.Find(&articleResults)
 	return articleResults, result.Error
 }
 
 // InsertArticleRecord inserts a new article record in the database.
-func (db *Database) InsertArticleRecord(guid string, provider string, category string) error {
+func (db *Database) InsertArticleRecord(article entities.Article) error {
 	// Add Provider if it doesn't exist
 	var providerRecord Provider
-	result := db.conn.Where(Provider{Name: provider}).FirstOrCreate(&providerRecord)
+	result := db.conn.Where(Provider{Name: article.Provider}).FirstOrCreate(&providerRecord)
 	if result.Error != nil {
 		return result.Error
 	}
 
 	// Add Category if it doesn't exist
 	var categoryRecord Category
-	result = db.conn.Where(Category{Name: category}).FirstOrCreate(&categoryRecord)
+	result = db.conn.Where(Category{Name: article.Category}).FirstOrCreate(&categoryRecord)
 	if result.Error != nil {
 		return result.Error
 	}
 
 	articleRecord := Article{
-		GUID:       guid,
-		ProviderID: providerRecord.ID,
-		CategoryID: categoryRecord.ID,
+		GUID:          article.GUID,
+		Title:         article.Title,
+		Description:   article.Description,
+		Link:          article.Link,
+		PublishedDate: article.PublishedTime,
+		ProviderID:    providerRecord.ID,
+		CategoryID:    categoryRecord.ID,
 	}
 
 	result = db.conn.Create(&articleRecord)

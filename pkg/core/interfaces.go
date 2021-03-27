@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"time"
 
 	"github.com/gustavooferreira/news-app-articles-mgmt-service/pkg/core/entities"
 )
@@ -9,7 +10,7 @@ import (
 // Repository represents a database holding the data
 type Repository interface {
 	HealthCheck() error
-	GetArticles(provider string, category string) (articles entities.Articles, err error)
+	GetArticles(provider string, category string, sorting string, limit int, after *time.Time) (articles entities.Articles, err error)
 	AddArticle(article entities.Article) (err error)
 }
 
