@@ -44,7 +44,7 @@ coverage-report: ## Run the tests of the project and show line by line coverage 
 
 
 .PHONY: gen-mocks
-mockery: ## Run mockery
+gen-mocks: ## Run mockery
 	@mockery --recursive --name=Repository
 
 

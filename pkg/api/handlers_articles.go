@@ -90,8 +90,8 @@ func (s *Server) AddArticle(c *gin.Context) {
 	}
 
 	err = s.Repo.AddArticle(article)
-	if err, ok := err.(*repository.DBDUPError); ok {
-		s.Logger.Error(err.Error())
+	if errT, ok := err.(*repository.DBDUPError); ok {
+		s.Logger.Error(errT.Error())
 		RespondWithError(c, 409, "article GUID already exists in the database")
 		return
 	} else if err != nil {
@@ -138,7 +138,7 @@ func (s *Server) AddArticles(c *gin.Context) {
 		}
 
 		err = s.Repo.AddArticle(article)
-		if err, ok := err.(*repository.DBDUPError); ok {
+		if _, ok := err.(*repository.DBDUPError); ok {
 			continue
 		} else if err != nil {
 			s.Logger.Error(err.Error())
